@@ -3,9 +3,31 @@ services:
     build: .
     image: llm-proxy:local
     restart: unless-stopped
-    network_mode: host
     environment:
       CONFIG_PATH: /app/config/llm-proxy.yaml
     volumes:
       - ./config:/app/config:ro
       - ./logs:/var/log/llm-proxy
+    networks:
+      - proxy
+
+  caddy:
+    image: caddy:2
+    depends_on:
+      - llm-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: example.com
+      ACME_EMAIL: admin@example.com
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy_data:/data
+      - ./caddy_config:/config
+    networks:
+      - proxy
+
+networks:
+  proxy: {}

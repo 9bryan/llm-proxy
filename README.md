@@ -1,4 +1,4 @@
-# LLM Proxy (OpenAI-compatible → Ollama)
+# LLM Proxy (Ollama)
 
 **Disclaimer:** This is a developer tool. It runs over plain HTTP by default (no TLS) and logs prompts/response previews to disk. Do not expose it to untrusted networks without adding HTTPS and tightening access controls.
 
@@ -47,15 +47,15 @@ logging:
   file: /var/log/llm-proxy/requests.log
   level: INFO
 backends:
-  - name: home-ollama
-    base_url: http://ollama-box:11434
+  - name: default-ollama
+    base_url: http://ollama-host:11434
     timeout_seconds: 120
 clients:
   - name: example-client
     api_key: sk-proxy-example
     allowed_models:
       - openai_model: gpt-4o      # model name clients send
-        backend: home-ollama      # backend from the list above
+        backend: default-ollama   # backend from the list above
         target_model: llama3      # Ollama model name
 ```
 - **Add a new downstream Ollama**: append to `backends`.
@@ -67,12 +67,18 @@ clients:
 - API keys are not logged. Prompts and the first 200 chars of responses are logged for audit/debug.
 
 ## TLS / HTTPS
-- The service itself is HTTP. If CrewAI Enterprise requires HTTPS, place an ingress/reverse-proxy (nginx/Traefik/Caddy) in front or terminate TLS at your provider; point it at the container’s port `8000`.
+- The service itself is HTTP. A `caddy` service is included in `docker-compose.yml` to terminate HTTPS via Let's Encrypt and forward traffic to `llm-proxy` on port 8000.
+- Requirements: DNS for your domain pointing at this host; ports 80/443 reachable.
+- Setup:
+  1. Edit `docker-compose.yml` and set `DOMAIN` and `ACME_EMAIL` env vars on the `caddy` service.
+  2. Ensure `Caddyfile` is present (already included) and targets `llm-proxy:8000`.
+  3. Start: `docker-compose up -d`. Caddy will obtain certs automatically.
+- After HTTPS is working, you can firewall port 8000 to local/private networks and have clients use `https://<your-domain>/v1/...`.
 
 ## Notes / limitations
 - Only `/v1/chat/completions` is implemented; streaming and embeddings are not yet supported.
 - Token usage is returned as zeros (Ollama does not expose counts directly).
-- ZeroTier/VPN membership should be handled on the host; container just needs network reachability to your Ollama boxes.
+- VPN/overlay network membership should be handled on the host; the container just needs network reachability to your Ollama boxes.
 
 ## Development
 ```bash

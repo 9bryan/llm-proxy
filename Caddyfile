@@ -1,0 +1,11 @@
+{
+    email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+    encode gzip
+    reverse_proxy llm-proxy:8000
+    log {
+        output file /var/log/caddy/access.log
+    }
+}
