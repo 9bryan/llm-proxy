@@ -1,0 +1,11 @@
+services:
+  llm-proxy:
+    build: .
+    image: llm-proxy:local
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      CONFIG_PATH: /app/config/llm-proxy.yaml
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs:/var/log/llm-proxy
